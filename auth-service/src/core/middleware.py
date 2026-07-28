@@ -1,0 +1,28 @@
+from uuid import uuid4
+
+from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+from opentelemetry import trace
+
+
+class RequestIdMiddleware(BaseHTTPMiddleware):
+
+    async def dispatch(self, request: Request, call_next):
+
+        request_id = request.headers.get("X-Request-Id")
+
+        if request_id is None:
+            request_id = str(uuid4())
+
+        request.state.request_id = request_id
+
+        span = trace.get_current_span()
+
+        if span.is_recording():
+            span.set_attribute("request.id", request_id)
+
+        response = await call_next(request)
+
+        response.headers["X-Request-Id"] = request_id
+
+        return response

@@ -1,0 +1,67 @@
+
+services:
+
+  postgres-test:
+    image: postgres:16-alpine
+
+    environment:
+      POSTGRES_DB: auth_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+
+  auth-service:
+
+    build:
+      context: .
+
+    env_file:
+      - .env.test
+
+    environment:
+      ENV_FILE: .env.test
+
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+    command: >
+      sh -c "
+      alembic upgrade head &&
+      uvicorn src.main:app --host 0.0.0.0 --port 8000
+      "
+
+  tests:
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    env_file:
+      - .env.test
+
+    environment:
+      ENV_FILE: .env.test
+      PYTHONPATH: /app
+
+    depends_on:
+      auth-service:
+        condition: service_started
+
+    command: >
+      sh -c "
+      python -m src.tests.functional.utils.wait_for_postgres &&
+      python -m src.tests.functional.utils.wait_for_redis &&
+      python -m src.tests.functional.utils.wait_for_api &&
+      pytest src/tests/functional/src -vv
+      "

@@ -1,9 +1,7 @@
 from uuid import UUID
-
 from fastapi import Depends
 from fastapi import HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.security import decode_token
@@ -28,7 +26,7 @@ async def get_current_user(
     except ValueError:
         raise HTTPException(401, "Invalid token")
 
-    jti = payload["jti"]
+    jti = payload.get("jti")
 
     revoked = await redis.exists(
         BLACKLIST_PREFIX + jti

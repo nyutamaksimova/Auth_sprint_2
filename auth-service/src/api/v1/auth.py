@@ -1,13 +1,8 @@
-from urllib.parse import urlencode
-
-import httpx
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.v1.deps import get_current_user
-from src.core.config import settings
 from src.db.postgres import get_db
 from src.db.redis_db import get_redis
 from src.models.auth import CurrentUser
@@ -85,27 +80,3 @@ async def logout(
     service = AuthService(db, redis)
 
     return await service.logout(current_user)
-
-
-@router.get("/yandex/login")
-async def yandex_login():
-    params = {
-        "response_type": "code",
-        "client_id": settings.YANDEX_CLIENT_ID,
-        "redirect_uri": settings.YANDEX_REDIRECT_URI,
-    }
-
-    url = f"{settings.YANDEX_AUTHORIZE_URL}?{urlencode(params)}"
-
-    return RedirectResponse(url)
-
-
-@router.get("/yandex/callback")
-async def yandex_callback(
-        code: str,
-        redis: Redis = Depends(get_redis),
-        db: AsyncSession = Depends(get_db),
-):
-    service = AuthService(db, redis)
-
-    return await service.yandex_callback(code)

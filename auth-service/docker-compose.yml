@@ -44,8 +44,8 @@ services:
     env_file:
       - .env
 
-    volumes:
-      - .:/app
+#    volumes:
+#      - .:/app
 
   jaeger:
     image: jaegertracing/all-in-one:latest
